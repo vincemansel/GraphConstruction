@@ -24,13 +24,15 @@ const int Word_Size = 5;
 void ConstructGraph(graphT & graph, Lexicon & lex, int &count, int &connections);
 nodeT * GetGraphNode(graphT & graph, string word);
 
-Stack<nodeT *> FindShortestLaddder(graphT & graph, nodeT * &start, nodeT * &end);
+Stack<nodeT *> FindShortestLaddder(nodeT * &start, nodeT * &end);
 Stack<nodeT *> FindLongestLadder(graphT & graph, nodeT * &word);
 void ShowAllConnectedWords(nodeT * word);
 
 string GetWordFromUser(string message, Lexicon & lex);
 void GetSizedLetterWords(string word, Lexicon & wordLex);
 void PrintLex(Lexicon &lex);
+
+Stack<nodeT *> DepthFirstSearch(nodeT *node);
 
 int main() {
     
@@ -56,9 +58,10 @@ int main() {
         
         cout << "Your options are:" << endl;
         cout << "(1) Find the shortest word ladder between two " << Word_Size << " letter words (BFS)" << endl;
-        cout << "(2) Find the longest word ladder of a " << Word_Size << " letter word (DFS)" << endl;
-        cout << "(3) Show all words connected to a " << Word_Size << " letter word" << endl;
-        cout << "(4) Quit" << endl;
+        cout << "(2) Find the longest word ladder of a " << Word_Size << " letter word (BFSx)" << endl;
+        cout << "(3) Run a Depth First Search from a " << Word_Size << " letter word (DFS)" << endl;
+        cout << "(4) Show all words connected to a " << Word_Size << " letter word" << endl;
+        cout << "(5) Quit" << endl;
         cout << "Enter choice: ";
         
         int choice = GetInteger();
@@ -77,7 +80,7 @@ int main() {
                 endWord = GetWordFromUser("Enter the ending " + IntegerToString(Word_Size) + " letter word: ", lex);
                 start = GetGraphNode(graph, startWord);
                 end = GetGraphNode(graph, endWord);
-                ladder = FindShortestLaddder(graph, start, end);
+                ladder = FindShortestLaddder(start, end);
                 break;
             case 2:
                 startWord = GetWordFromUser("Enter a " + IntegerToString(Word_Size) + " letter word: ", lex);
@@ -87,9 +90,14 @@ int main() {
             case 3:
                 startWord = GetWordFromUser("Enter a " + IntegerToString(Word_Size) + " letter word: ", lex);
                 word = GetGraphNode(graph, startWord);
-                ShowAllConnectedWords(word);
+                ladder = DepthFirstSearch(word);
                 break;
             case 4:
+                startWord = GetWordFromUser("Enter a " + IntegerToString(Word_Size) + " letter word: ", lex);
+                word = GetGraphNode(graph, startWord);
+                ShowAllConnectedWords(word);
+                break;
+            case 5:
                 cout << "Thanks for playing with the Word Ladder. Bye!" << endl;
                 timeToQuit = true;
                 break;    
@@ -187,22 +195,40 @@ void ConstructGraph(graphT & graph, Lexicon & lex, int &count, int &connections)
 
 void PrintLadder(Stack<nodeT *> ladder) {
     
+    int size = ladder.size();
     while (!ladder.isEmpty()) {
         cout << ladder.pop()->name << endl;
     }
+    cout << "Ladder is " << size << " words long." << endl;
 }
 
-Stack<nodeT *> FindShortestLaddder(graphT & graph, nodeT * &start, nodeT * &end) { 
+Stack<nodeT *> FindShortestLaddder(nodeT * &start, nodeT * &end) { 
     Stack<nodeT *> ladder = ShortestPathFirst(start, end);
-    
     PrintLadder(ladder);
-    
     return ladder;
 }
 
-Stack<nodeT *> FindLongestLadder(graphT & graph, nodeT * &word) {    
+Stack<nodeT *> FindLongestLadder(graphT &graph, nodeT * &word) {    
     Stack<nodeT *> ladder;
+    string longestWord;
     
+    Set<nodeT *>::Iterator itr = graph.allNodes.iterator();
+    
+    while (itr.hasNext()) {
+        nodeT * end = itr.next();
+        Stack<nodeT *> currentLadder = ShortestPathFirst(word, end);
+        if (!currentLadder.isEmpty())
+            cout << "Peeking: " << currentLadder.peek()->name << endl;
+        if (currentLadder.size() > ladder.size() && !currentLadder.isEmpty() && currentLadder.peek() == end) {
+            ladder = currentLadder;
+            longestWord = end->name;
+            cout << "Current Leader is " << longestWord << ":" << ladder.size() << endl;
+        }
+    }
+    
+    cout << "Longest ladder from " << word->name << " is to " << longestWord << "." << endl;
+
+    PrintLadder(ladder);
     return ladder;  
 }
 
@@ -234,6 +260,23 @@ void ShowAllConnectedWords(nodeT * word) {
     
 }
 
+void RecDepthFirstSearch(nodeT *node, Set<nodeT *> & visited, Stack<nodeT *> & ladder) {
+    if (visited.contains(node)) {
+        return;
+    }
+    visited.add(node);
+    ladder.push(node);
+    foreach (arcT *arc in node->connected) {
+        RecDepthFirstSearch(arc->end, visited, ladder);
+    }
+}
+
+Stack<nodeT *> DepthFirstSearch(nodeT *node) {
+    Set<nodeT *> visited;
+    Stack<nodeT *> ladder;
+    RecDepthFirstSearch(node, visited, ladder);
+    return ladder;
+}
 
 
 
